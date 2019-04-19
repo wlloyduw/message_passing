@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # JSON object to pass to Lambda Function
-json={"\"data\"":"\"The\u0020Data\",\"rounds\"":3,\"currentround\"":1,\"nodespread\"":4}
+json={"\"data\"":"\"The\u0020Data\",\"rounds\"":9,\"currentround\"":1,\"nodespread\"":5}
 echo $json
 
 #echo "Invoking Lambda function using API Gateway"

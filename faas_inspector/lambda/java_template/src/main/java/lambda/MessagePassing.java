@@ -26,6 +26,7 @@ public class MessagePassing implements RequestHandler<Request, Response>
     static String CONTAINER_ID = "/tmp/container-id";
     static Charset CHARSET = Charset.forName("US-ASCII");
     static String nodedata = "";
+    static int calls = 0;
     
     
     // Lambda Function Handler
@@ -45,7 +46,9 @@ public class MessagePassing implements RequestHandler<Request, Response>
         // *********************************************************************
         // Implement Lambda Function Here
         // *********************************************************************
-
+        if (!request.getSleep())
+            calls ++;
+        
         // Pass data, only if this node is just now receieving it...
         if ((request.getCurrentround() < request.getRounds()) && (!nodedata.matches(request.getData())))
         {
@@ -100,6 +103,7 @@ public class MessagePassing implements RequestHandler<Request, Response>
         
         // Set return result in Response class, class is marshalled into JSON
         r.setValue(nodedata);
+        r.setCalls(calls);
         reg.setRuntime();
         return r;
     }

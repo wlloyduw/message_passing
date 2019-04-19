@@ -31,6 +31,16 @@ public class Response extends fiResponse {
     {
         this.value = value;
     }
+    
+    private int calls;
+    public int getCalls()
+    {
+        return calls;
+    }
+    public void setCalls(int calls)
+    {
+        this.calls = calls;
+    }
 
     @Override
     public String toString()

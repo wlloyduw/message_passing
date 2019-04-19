@@ -46,7 +46,7 @@ callservice() {
 
   if [ $threadid -eq 1 ]
   then
-    echo "run_id,thread_id,uuid,data,cputype,cpusteal,vmuptime,pid,cpuusr,cpukrn,elapsed_time,server_runtime,latency,sleep_time_ms,new_container"
+    echo "run_id,thread_id,uuid,data,calls,cputype,cpusteal,vmuptime,pid,cpuusr,cpukrn,elapsed_time,server_runtime,latency,sleep_time_ms,new_container"
   fi
   for (( i=1 ; i <= $totalruns; i++ ))
   do
@@ -88,12 +88,13 @@ callservice() {
     newcont=`echo $output | jq '.newcontainer'`
     ssruntime=`echo $output | jq '.runtime'`
     thedata=`echo $output | jq '.value'`
+    calls=`echo $output | jq '.calls'`
     
     elapsedtime=`expr $time2 - $time1`
     sleeptime=`echo $onesecond - $elapsedtime | bc -l`
     latency=`echo $elapsedtime - $ssruntime | bc -l`
     sleeptimems=`echo $sleeptime/$onesecond | bc -l`
-    echo "$i,$threadid,$uuid,$thedata,$cputype,$cpusteal,$vuptime,$pid,$cpuusr,$cpukrn,$elapsedtime,$ssruntime,$latency,$sleeptimems,$newcont"
+    echo "$i,$threadid,$uuid,$thedata,$calls,$cputype,$cpusteal,$vuptime,$pid,$cpuusr,$cpukrn,$elapsedtime,$ssruntime,$latency,$sleeptimems,$newcont"
     echo "$uuid,$elapsedtime,$ssruntime,$latency,$vuptime,$newcont,$cputype" >> .uniqcont
     if (( $sleeptime > 0 ))
     then
