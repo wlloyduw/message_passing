@@ -14,7 +14,7 @@ public class Request {
     int rounds;
     int currentround;
     int nodespread;
-    boolean sleep;
+    boolean sleep = false;
     
     public String getData()
     {

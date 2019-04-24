@@ -51,52 +51,62 @@ public class MessagePassing implements RequestHandler<Request, Response>
             calls ++;
         
         // Pass data, only if this node is just now receieving it...
-        if ((request.getCurrentround() < request.getRounds()) && (!nodedata.matches(request.getData())))
+        if ((request.getCurrentround() <= request.getRounds()) && (!nodedata.matches(request.getData())) && (!request.getSleep()))
         {
             // Persist the data locally
             nodedata=request.getData();
             
-            Request newRequest = new Request();
-            newRequest.setCurrentround(request.getCurrentround()+1);
-            newRequest.setRounds(request.getRounds());
-            newRequest.setNodespread(request.getNodespread());
-            newRequest.setData(request.getData());
-            newRequest.setSleep(false);
-            final ObjectMapper mapper = new ObjectMapper();
-            try
-            {
-                logger.log("new request JSON=" + mapper.writeValueAsString(newRequest));
-            }
-            catch (JsonProcessingException jpe)
-            {
-                logger.log("Error displaying newRequest object=" + jpe.toString());
-            }
+            if (request.getCurrentround() < request.getRounds()) {
+                Request newRequest = new Request();
+                newRequest.setCurrentround(request.getCurrentround()+1);
+                newRequest.setRounds(request.getRounds());
+                newRequest.setNodespread(request.getNodespread());
+                newRequest.setData(request.getData());
+                newRequest.setSleep(false);
+                final ObjectMapper mapper = new ObjectMapper();
+                try
+                {
+                    logger.log("new request JSON=" + mapper.writeValueAsString(newRequest));
+                }
+                catch (JsonProcessingException jpe)
+                {
+                    logger.log("Error displaying newRequest object=" + jpe.toString());
+                }
 
-            final MessagePassingService messagePassingService = LambdaInvokerFactory.builder()
-                    .lambdaClient(AWSLambdaClientBuilder.defaultClient())
-                    .build(MessagePassingService.class);                
-            
-            // TO DO
-            // Make this multithreaded
-            for (int i=0;i<request.getNodespread();i++)
-            {
-                totalCalls = totalCalls + 1;
-                logger.log("Nodespread " + i+1 + " of " + request.getNodespread()); 
-                Response newResponse = messagePassingService.callMessagePassing(newRequest);
-                logger.log("lambda function invoke complete");
-                logger.log("function-response=" + newResponse.toString());
-                totalCalls = totalCalls + newResponse.getTotalCalls();
+                final MessagePassingService messagePassingService = LambdaInvokerFactory.builder()
+                        .lambdaClient(AWSLambdaClientBuilder.defaultClient())
+                        .build(MessagePassingService.class);                
+
+                // TO DO
+                // Make this multithreaded
+                for (int i=0;i<request.getNodespread();i++)
+                {
+                    totalCalls = totalCalls + 1;
+                    logger.log("Nodespread " + i+1 + " of " + request.getNodespread()); 
+                    Response newResponse = messagePassingService.callMessagePassing(newRequest);
+                    logger.log("lambda function invoke complete");
+                    logger.log("function-response=" + newResponse.toString());
+                    totalCalls = totalCalls + newResponse.getTotalCalls();
+                }
             }
-            
         }
         else
         {
+//            if ((request.getCurrentround() == request.getRounds()))
+//            {
+//                // Persist the data locally for the last round
+//                nodedata=request.getData();
+//            }
+            
             logger.log("Round is " + request.getCurrentround() + " of " + request.getRounds());
             logger.log("Request to pass data, but local node has data='" + nodedata + "'");
             try
             {
                 if (request.getSleep())
+                {
+                    logger.log("SLEEEPING!!!");
                     Thread.sleep(10000);
+                }
                 //r.setCalls(calls);
                 // Reset calls counter to 0 so message passing can be retested
                 //calls = 0;

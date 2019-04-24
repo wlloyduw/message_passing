@@ -11,7 +11,7 @@ then
 fi
 
 # JSON object to pass to Lambda Function
-json={"\"data\"":"\"The\u0020Data\",\"rounds\"":$rounds,\"currentround\"":1,\"nodespread\"":$nodespread}
+json={"\"data\"":"\"The\u0020Data\",\"rounds\"":$rounds,\"currentround\"":0,\"nodespread\"":$nodespread}
 #json={"\"data\"":"\"\",\"rounds\"":0,\"currentround\"":0,\"nodespread\"":0,\"sleep\"":true"}
 echo $json
 
