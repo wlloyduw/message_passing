@@ -42,6 +42,18 @@ public class Response extends fiResponse {
         this.calls = calls;
     }
 
+    
+    private int totalCalls;
+    public int getTotalCalls()
+    {
+        return totalCalls;
+    }
+    public void setTotalCalls(int totalCalls)
+    {
+        this.totalCalls = totalCalls;
+    }
+    
+    
     @Override
     public String toString()
     {

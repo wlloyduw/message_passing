@@ -32,6 +32,7 @@ public class MessagePassing implements RequestHandler<Request, Response>
     // Lambda Function Handler
     public Response handleRequest(Request request, Context context) {
         // Register function to start timing
+        int totalCalls = 0;
         register reg = new register();
 
         // Create logger
@@ -79,10 +80,12 @@ public class MessagePassing implements RequestHandler<Request, Response>
             // Make this multithreaded
             for (int i=0;i<request.getNodespread();i++)
             {
+                totalCalls = totalCalls + 1;
                 logger.log("Nodespread " + i+1 + " of " + request.getNodespread()); 
                 Response newResponse = messagePassingService.callMessagePassing(newRequest);
                 logger.log("lambda function invoke complete");
                 logger.log("function-response=" + newResponse.toString());
+                totalCalls = totalCalls + newResponse.getTotalCalls();
             }
             
         }
@@ -94,6 +97,9 @@ public class MessagePassing implements RequestHandler<Request, Response>
             {
                 if (request.getSleep())
                     Thread.sleep(10000);
+                //r.setCalls(calls);
+                // Reset calls counter to 0 so message passing can be retested
+                //calls = 0;
             }
             catch (InterruptedException ie)
             {
@@ -104,6 +110,7 @@ public class MessagePassing implements RequestHandler<Request, Response>
         // Set return result in Response class, class is marshalled into JSON
         r.setValue(nodedata);
         r.setCalls(calls);
+        r.setTotalCalls(totalCalls);
         reg.setRuntime();
         return r;
     }

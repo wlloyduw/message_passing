@@ -1,7 +1,17 @@
 #!/bin/bash
+rounds=$1
+nodespread=$2
+
+if [ -z "$rounds" ] || [ -z "$nodespread" ]
+then
+  echo ""
+  echo "Usage ./messagepass.sh {# of rounds} {node spread per round}"
+  echo ""
+  exit
+fi
 
 # JSON object to pass to Lambda Function
-json={"\"data\"":"\"The\u0020Data3\",\"rounds\"":9,\"currentround\"":1,\"nodespread\"":5}
+json={"\"data\"":"\"The\u0020Data\",\"rounds\"":$rounds,\"currentround\"":1,\"nodespread\"":$nodespread}
 #json={"\"data\"":"\"\",\"rounds\"":0,\"currentround\"":0,\"nodespread\"":0,\"sleep\"":true"}
 echo $json
 

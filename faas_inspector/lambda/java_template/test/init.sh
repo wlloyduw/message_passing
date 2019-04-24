@@ -10,7 +10,7 @@
 # file: parfunction   Provide AWS Lambda function name on a single line text file
 #
 totalruns=$1
-threads=$2
+threads=$1
 vmreport=$3
 contreport=$4
 containers=()
@@ -46,7 +46,8 @@ callservice() {
 
   if [ $threadid -eq 1 ]
   then
-    echo "run_id,thread_id,uuid,data,calls,totalcalls,cputype,cpusteal,vmuptime,pid,cpuusr,cpukrn,elapsed_time,server_runtime,latency,sleep_time_ms,new_container"
+    #echo "run_id,thread_id,uuid,data,calls,totalcalls,cputype,cpusteal,vmuptime,pid,cpuusr,cpukrn,elapsed_time,server_runtime,latency,sleep_time_ms,new_container"
+    sleep .01
   fi
   for (( i=1 ; i <= $totalruns; i++ ))
   do
@@ -95,8 +96,8 @@ callservice() {
     sleeptime=`echo $onesecond - $elapsedtime | bc -l`
     latency=`echo $elapsedtime - $ssruntime | bc -l`
     sleeptimems=`echo $sleeptime/$onesecond | bc -l`
-    echo "$i,$threadid,$uuid,$thedata,$calls,$totalcalls,$cputype,$cpusteal,$vuptime,$pid,$cpuusr,$cpukrn,$elapsedtime,$ssruntime,$latency,$sleeptimems,$newcont"
-    echo "$uuid,$elapsedtime,$ssruntime,$latency,$vuptime,$newcont,$cputype" >> .uniqcont
+    #echo "$i,$threadid,$uuid,$thedata,$calls,$totalcalls,$cputype,$cpusteal,$vuptime,$pid,$cpuusr,$cpukrn,$elapsedtime,$ssruntime,$latency,$sleeptimems,$newcont"
+    echo "$uuid,$elapsedtime,$ssruntime,$latency,$vuptime,$newcont,$cputype,$thedata,$calls,$totalcalls" >> .uniqcont
     if (( $sleeptime > 0 ))
     then
       sleep $sleeptimems
@@ -111,7 +112,19 @@ export -f callservice
 runsperthread=`echo $totalruns/$threads | bc -l`
 runsperthread=${runsperthread%.*}
 date
-echo "Setting up test: runsperthread=$runsperthread threads=$threads totalruns=$totalruns"
+echo "Setting up nodes: nodecount=$1 using: runsperthread=$runsperthread threads=$threads totalruns=$totalruns"
+echo ""
+
+filename="parfunction"
+while read -r line
+do
+  parfunction=$line
+done < "$filename"
+
+# invalidates old containers
+aws lambda update-function-configuration --function-name $parfunction --region us-east-1 --timeout 240 > /dev/null
+aws lambda update-function-configuration --function-name $parfunction --region us-east-1 --timeout 300 > /dev/null
+
 for (( i=1 ; i <= $threads ; i ++))
 do
   arpt+=($runsperthread)
@@ -148,6 +161,9 @@ do
     host=`echo $line | cut -d',' -f 5`
     isnewcont=`echo $line | cut -d',' -f 6`
     cputype=`echo $line | cut -d',' -f 7` 
+    thedata=`echo $line | cut -d',' -f 8` 
+    calls=`echo $line | cut -d',' -f 9` 
+    totalcalls=`echo $line | cut -d',' -f 10` 
     alltimes=`expr $alltimes + $time`
     allsstimes=`expr $allsstimes + $sstime`
     alllatency=`expr $alllatency + $latency`
@@ -181,6 +197,9 @@ do
         ctimes+=($time)
         csstimes+=($sstime)
         clatency+=($latency)
+        cdata+=($thedata)
+        ccalls+=($calls)
+        ctotalcalls+=($totalcalls) 
     fi
 
     # Populate array of unique hosts
@@ -278,7 +297,8 @@ allsstimes_sec=`echo $allsstimes / 1000 | bc -l`
 totalcost=`echo "$allsstimes_sec * $price_gbsec * $memory_gb" | bc -l`
 totalcost=`printf '%.*f\n' 4 $totalcost`
 rm .uniqcont
-echo "uuid,host,cputype,uses,totaltime,avgruntime_cont,avgsstuntime_cont,avglatency_cont,uses_minus_avguses_sq"
+echo "uuid,host,thedata,calls,totalcalls,uses,avgruntime_cont,avgsstuntime_cont,avglatency_cont"
+#echo "uuid,host,cputype,calls,totalcalls,uses,totaltime,avgruntime_cont,avgsstuntime_cont,avglatency_cont,uses_minus_avguses_sq"
 total=0
 for ((i=0;i < ${#containers[@]};i++)) {
   avg=`echo ${ctimes[$i]} / ${cuses[$i]} | bc -l`
@@ -290,7 +310,8 @@ for ((i=0;i < ${#containers[@]};i++)) {
   stdiff=`echo ${cuses[$i]} - $runspercont | bc -l` 
   stdiffsq=`echo "$stdiff * $stdiff" | bc -l` 
   total=`echo $total + $stdiffsq | bc -l`
-  echo "${containers[$i]},${chosts[$i]},${ccputype[$i]},${cuses[$i]},${ctimes[$i]},$avg,$ssavg,$latencyavg,$stdiffsq"
+  echo "${containers[$i]},${chosts[$i]},${cdata[$i]},${ccalls[$i]},${ctotalcalls[$i]},${cuses[$i]},$avg,$ssavg,$latencyavg"
+  #echo "${containers[$i]},${chosts[$i]},${ccalls[$i]},${ctotalcalls[$i]},${ccputype[$i]},${cuses[$i]},${ctimes[$i]},$avg,$ssavg,$latencyavg,$stdiffsq"
 }
 
 #########################################################################################################################################################
@@ -303,8 +324,8 @@ stdev=`printf '%.*f\n' 3 $stdev`
 
 # hosts info
 currtime=$(date +%s)
-echo "Current time of test=$currtime"
-echo "host,host_cpu,host_up_time,uses,containers,totaltime,avgruntime_host,avgssruntime_host,avglatency_host,uses_minus_avguses_sq"
+#echo "Current time of test=$currtime"
+#echo "host,host_cpu,host_up_time,uses,containers,totaltime,avgruntime_host,avgssruntime_host,avglatency_host,uses_minus_avguses_sq"
 total=0
 if [[ ! -z $vmreport && $vmreport -eq 1 ]]
 then
@@ -330,7 +351,7 @@ for ((i=0;i < ${#hosts[@]};i++)) {
           (( ccount ++ ))
       fi
   } 
-  echo "${hosts[$i]},${hcputype[$i]},$uptime,${huses[$i]},$ccount,${htimes[$i]},$avg,$ssavg,$latencyavg,$stdiffsq"
+  #echo "${hosts[$i]},${hcputype[$i]},$uptime,${huses[$i]},$ccount,${htimes[$i]},$avg,$ssavg,$latencyavg,$stdiffsq"
 
   ##  Determine count of recycled hosts...
   ## 
@@ -370,7 +391,7 @@ stdevhost=`printf '%.*f\n' 3 $stdevhost`
 #########################################################################################################################################################
 
 # CPU Types info
-echo "cputype,uses,totaltime,avgruntime_per_cpu,avgssruntime_per_cpu,avglatency_per_cpu"
+#echo "cputype,uses,totaltime,avgruntime_per_cpu,avgssruntime_per_cpu,avglatency_per_cpu"
 total=0
 
 # Loop through CPU Types and make summary data
@@ -381,7 +402,7 @@ for ((i=0;i < ${#cpuTypes[@]};i++)) {
   cpussavg=`printf '%.*f\n' 0 $cpussavg`
   cpulatency=`echo ${cpulatency[$i]} / ${cpuuses[$i]} | bc -l`
   cpulatency=`printf '%.*f\n' 0 $cpulatency`
-  echo "${cpuTypes[$i]},${cpuuses[$i]},${cputimes[$i]},$cpuavg,$cpussavg,$cpulatency"
+  #echo "${cpuTypes[$i]},${cpuuses[$i]},${cputimes[$i]},$cpuavg,$cpussavg,$cpulatency"
 }
 	
 
@@ -392,5 +413,6 @@ for ((i=0;i < ${#cpuTypes[@]};i++)) {
 #
 # 
 #
+echo ""
 echo "containers,newcontainers,recycont,hosts,recyvms,avgruntime,avgssruntime,avglatency,runs_per_container,runs_per_cont_stdev,runs_per_host,runs_per_host_stdev,totalcost"
 echo "${#containers[@]},$newconts,$recycont,${#hosts[@]},$recyvms,$avgtime,$avgsstime,$avglatency,$runspercont,$stdev,$runsperhost,$stdevhost,\$$totalcost"
